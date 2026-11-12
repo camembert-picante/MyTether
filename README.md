@@ -4,10 +4,15 @@ Use your Android phone's internet on your Mac with a USB cable.
 
 ## Install
 
-1. Get **MyTether.app**. For now you build it yourself, which takes one command (see
-   [Build it yourself](#build-it-yourself) below).
-2. Drag it into your **Applications** folder.
-3. Open it, click **Set Up**, and type your Mac password.
+1. Download **MyTether.zip** from the
+   [latest release](https://github.com/camembert-picante/MyTether/releases/latest) and open it.
+   It runs on Macs with Apple silicon. On an Intel Mac,
+   [build it yourself](#build-it-yourself).
+2. Drag **MyTether** into your **Applications** folder.
+3. Open it. macOS will say it can't check it for malware, because it isn't signed by a paid
+   Apple developer account. Click **Done**, then go to **System Settings › Privacy & Security**,
+   scroll down, and click **Open Anyway** next to MyTether.
+4. Click **Set Up**, and type your Mac password.
 
 You only do this once.
 
@@ -40,11 +45,13 @@ Trash.
 ## Good to know
 
 - You need macOS 14 or newer.
-- MyTether sends nothing anywhere and keeps no log.
+- MyTether keeps no log. It only goes online when you click **Check for Updates** in the gear
+  menu, to ask GitHub for the newest version.
 - Your password is needed because only an administrator can add a network connection on a Mac.
   It installs a small helper that runs only while it's needed and only answers your copy of
   MyTether.
-- If you install a newer copy, open it and click **Update**.
+- To find a newer version, click the gear, then **Check for Updates**. After you install it,
+  click **Update** and type your password, so the helper knows the new copy.
 
 ## Build it yourself
 

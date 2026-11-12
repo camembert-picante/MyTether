@@ -161,6 +161,7 @@ private struct SettingsGear: View {
             Toggle("Show speed in menu bar", isOn: $model.showSpeedInMenuBar)
             Toggle("Start at login", isOn: $model.startAtLogin)
             Divider()
+            Button("Check for Updates…") { model.checkForUpdates() }
             if Installer.helper != .missing {
                 Button("Remove Background Helper…") { model.removeHelper() }
             }

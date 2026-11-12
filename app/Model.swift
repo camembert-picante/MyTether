@@ -137,6 +137,27 @@ final class Model {
         }
     }
 
+    func checkForUpdates() {
+        Task {
+            switch await Release.check() {
+            case .newer(let release):
+                NSApp.activate(ignoringOtherApps: true)
+                let alert = NSAlert()
+                alert.icon = NSImage(named: NSImage.applicationIconName)
+                alert.messageText = "MyTether \(release.version) is available"
+                alert.informativeText = "You have \(Release.current). Download the new version, open it, "
+                    + "and click Move to Applications. It replaces this copy."
+                alert.addButton(withTitle: "Download")
+                alert.addButton(withTitle: "Not Now")
+                if alert.runModal() == .alertFirstButtonReturn { NSWorkspace.shared.open(release.page) }
+            case .upToDate:
+                tell("You’re up to date", "MyTether \(Release.current) is the newest version.")
+            case .failed:
+                tell("Couldn’t check for updates", "Check your internet connection, then try again.")
+            }
+        }
+    }
+
     func quit() {
         guard phase.isConnected || facts.helperState == "connecting" else { NSApp.terminate(nil); return }
         helper.send("disconnect") { _ in NSApp.terminate(nil) }
