@@ -70,6 +70,6 @@ make test
 ## License
 
 MyTether is free and open source under the GNU General Public License, version 3 or any later
-version. You can use it, change it and share it, even for money. If you share a changed copy,
+version. You can use it, change it and share it. If you share a changed copy,
 you have to share its source code under the same license. The full text is in
 [LICENSE](LICENSE).
