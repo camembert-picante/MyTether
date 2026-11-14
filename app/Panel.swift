@@ -10,13 +10,12 @@ struct MyTetherApp: App {
         MenuBarExtra {
             Panel(model: model)
         } label: {
-            HStack(spacing: 4) {
-                Image(nsImage: usbMenuBarImage())
-                if model.showSpeedInMenuBar, model.phase.isConnected {
-                    Text(speedText(model.downloadSpeed)).monospacedDigit()
-                }
-            }
-            .task { model.start() }
+            // A menu bar label only shows one image or line of text, so the stacked speeds are
+            // drawn into the image.
+            Image(nsImage: model.showSpeedInMenuBar && model.phase.isConnected
+                  ? usbMenuBarImage(speeds: (model.downloadSpeed, model.uploadSpeed))
+                  : usbMenuBarImage())
+                .task { model.start() }
         }
         .menuBarExtraStyle(.window)
     }
@@ -180,23 +179,29 @@ private struct SettingsGear: View {
 private struct StatusBadge: View {
     var tint: Color
     var working: Bool
-    @State private var pulse = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
-            Circle()
-                .stroke(tint.opacity(working ? 0.4 : 0), lineWidth: 2)
-                .scaleEffect(pulse ? 1.15 : 1)
-                .opacity(pulse ? 0 : 1)
+            // The ring is drawn from the clock rather than with a repeating SwiftUI animation.
+            // A repeating animation also caught the panel's own resizing and kept it going
+            // forever, and it never fully stopped. This only exists while there's work going on.
+            if working, reduceMotion {
+                Circle().stroke(tint.opacity(0.4), lineWidth: 2)
+            } else if working {
+                TimelineView(.animation) { context in
+                    let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.4) / 1.4
+                    let eased = 1 - (1 - t) * (1 - t)
+                    Circle()
+                        .stroke(tint.opacity(0.4), lineWidth: 2)
+                        .scaleEffect(1 + 0.15 * eased)
+                        .opacity(1 - eased)
+                }
+            }
             Circle().fill(tint.opacity(0.15))
             USBShape().fill(tint).padding(9)
         }
         .frame(width: 40, height: 40)
-        .onChange(of: working, initial: true) {
-            pulse = false
-            guard working else { return }
-            withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) { pulse = true }
-        }
         .accessibilityHidden(true)
     }
 }
@@ -210,17 +215,27 @@ private struct USBShape: Shape {
     func path(in rect: CGRect) -> Path { Path(usbGlyphPath(in: rect)) }
 }
 
-/// A template image, so macOS colors it to suit a light or dark menu bar.
-private func usbMenuBarImage() -> NSImage {
-    let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
+/// A template image, so macOS colors it to suit a light or dark menu bar. With speeds, download
+/// and upload sit stacked to the right of the plug, the way Little Snitch shows traffic.
+func usbMenuBarImage(speeds: (down: Double, up: Double)? = nil) -> NSImage {
+    let font = NSFont.monospacedDigitSystemFont(ofSize: 9, weight: .medium)
+    let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.black]
+    let lines = speeds.map { ["↓ " + speedText($0.down), "↑ " + speedText($0.up)] } ?? []
+    // A fixed width, wide enough for the longest speed, so neighbouring icons never shift.
+    let textWidth = lines.isEmpty ? 0 : ceil(("↓ 888.8 Mbps" as NSString).size(withAttributes: attributes).width)
+    let size = NSSize(width: 18 + (lines.isEmpty ? 0 : 3 + textWidth), height: 18)
+    let image = NSImage(size: size, flipped: true) { _ in
         guard let context = NSGraphicsContext.current?.cgContext else { return false }
         // Half a point of margin keeps the edges from touching neighbouring menu bar icons.
-        context.addPath(usbGlyphPath(in: rect.insetBy(dx: 0.5, dy: 0.5)))
+        context.addPath(usbGlyphPath(in: CGRect(x: 0.5, y: 0.5, width: 17, height: 17), cord: .straight))
         context.setFillColor(NSColor.black.cgColor)
         context.fillPath()
+        for (i, line) in lines.enumerated() {
+            (line as NSString).draw(at: NSPoint(x: 21, y: CGFloat(i) * 9 - 1.5), withAttributes: attributes)
+        }
         return true
     }
     image.isTemplate = true
-    image.accessibilityDescription = "MyTether"
+    image.accessibilityDescription = lines.isEmpty ? "MyTether" : "MyTether, " + lines.joined(separator: ", ")
     return image
 }
