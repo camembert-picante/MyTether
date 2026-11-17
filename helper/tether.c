@@ -140,8 +140,11 @@ static void *usb_main(void *arg) {
     }
     dispatch_semaphore_signal(t.usb_ready);
     // The sender needs this thread to finish its last write, so this one leaves after it.
+    // The loop keeps running between completions. Returning after each one cost about half
+    // the helper's CPU, because every return sets up and tears down a timer. A stop wakes it
+    // with CFRunLoopStop, which stop_usb_thread repeats until this thread is done.
     while (!atomic_load(&t.stop) || t.rx_pending > 0 || atomic_load(&t.sender_active))
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 3600, true);
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 3600, false);
     atomic_store(&t.usb_done, true);
     return NULL;
 }

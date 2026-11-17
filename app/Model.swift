@@ -20,7 +20,7 @@ final class Model {
         }
     }
     var showSpeedInMenuBar = UserDefaults.standard.bool(forKey: "showSpeedInMenuBar") {
-        didSet { UserDefaults.standard.set(showSpeedInMenuBar, forKey: "showSpeedInMenuBar"); updateSpeedUpdates() }
+        didSet { UserDefaults.standard.set(showSpeedInMenuBar, forKey: "showSpeedInMenuBar") }
     }
     var startAtLogin = SMAppService.mainApp.status == .enabled {
         didSet {
@@ -31,9 +31,6 @@ final class Model {
                 try? SMAppService.mainApp.unregister()
             }
         }
-    }
-    var panelOpen = false {
-        didSet { updateSpeedUpdates() }
     }
 
     private let helper = HelperClient()
@@ -228,9 +225,11 @@ final class Model {
         }
     }
 
-    /// Speeds are only asked for while someone can see them.
+    /// Speeds are measured the whole time a phone is connected, so the panel has them the
+    /// moment it opens. It's one small question to the helper every two seconds. Waiting for
+    /// the panel to say it's open didn't work: a menu bar panel doesn't reliably say so.
     private func updateSpeedUpdates() {
-        let needed = phase.isConnected && (panelOpen || showSpeedInMenuBar)
+        let needed = phase.isConnected
         guard needed != (speedTask != nil) else { return }
         speedTask?.cancel()
         speedTask = nil
@@ -248,10 +247,11 @@ final class Model {
                 MainActor.assumeIsolated {
                     guard let self, status.state == "connected" else { return }
                     let now = ContinuousClock.now
-                    if let last {
+                    // The counters start again from zero if the helper restarts.
+                    if let last, status.rx >= last.rx, status.tx >= last.tx {
                         let seconds = max((now - last.time) / .seconds(1), 0.1)
-                        self.downloadSpeed = Double(status.rx &- last.rx) * 8 / seconds
-                        self.uploadSpeed = Double(status.tx &- last.tx) * 8 / seconds
+                        self.downloadSpeed = Double(status.rx - last.rx) * 8 / seconds
+                        self.uploadSpeed = Double(status.tx - last.tx) * 8 / seconds
                     }
                     last = (status.rx, status.tx, now)
                 }

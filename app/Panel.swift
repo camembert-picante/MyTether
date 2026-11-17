@@ -72,8 +72,6 @@ struct Panel: View {
         .padding(14)
         .frame(width: 290)
         .animation(.smooth(duration: 0.2), value: phase)
-        .onAppear { model.panelOpen = true }
-        .onDisappear { model.panelOpen = false }
     }
 
     /// Green when connected, gray when there's no phone or the connection failed, blue the
